@@ -62,20 +62,20 @@ map.on('load', () => {
     // copies of the feature are visible, the popup appears
     // over the copy being pointed to.
     while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+      coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
     }
 
     // Populate the popup and set its coordinates
     // based on the feature found.
     popup.setLngLat(coordinates).setHTML(title).addTo(map);
-});
+  });
 
-map.on('mouseleave', 'boats', () => {
+  map.on('mouseleave', 'boats', () => {
     map.getCanvas().style.cursor = '';
     popup.remove();
-});
+  });
 
-  const socket = new WebSocket("ws://localhost:3001")
+  const socket = new WebSocket("wss://atbs.pgm.sh")
 
   const statuses = {
     0: 'Under way using engine',

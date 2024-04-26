@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 const { WebSocketServer } = WebSocket;
 
-const server = new WebSocketServer({ port: 3001 });
+const server = new WebSocketServer({ port: 80 });
 const socket = new WebSocket("wss://stream.aisstream.io/v0/stream")
 
 require('dotenv').config()
