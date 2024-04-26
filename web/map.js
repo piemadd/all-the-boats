@@ -1,5 +1,6 @@
 var map = new maplibregl.Map({
   container: "map", // container id
+  hash: "mapHash",
   style: mapStyle = {
     zoom: 0,
     pitch: 0,
