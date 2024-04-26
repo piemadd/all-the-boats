@@ -1,12 +1,31 @@
 const WebSocket = require('ws');
 const { WebSocketServer } = WebSocket;
+const { createServer } = require('http');
 
-const server = new WebSocketServer({ port: 80 });
+let stats = {
+  sendCount: 0,
+  perSecond: 0,
+}
+
+let sendCount = 0;
+
+const requestListener = ((req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.writeHead(200);
+  res.end(JSON.stringify(stats));
+});
+
+const server = createServer(requestListener);
+const wss = new WebSocketServer({ noServer: true });
 const socket = new WebSocket("wss://stream.aisstream.io/v0/stream")
 
 require('dotenv').config()
 
-let sendCount = 0;
+server.on('upgrade', function upgrade(request, socket, head) {
+  wss.handleUpgrade(request, socket, head, function done(ws) {
+    wss.emit('connection', ws, request);
+  });
+});
 
 socket.onopen = function (_) {
   let subscriptionMessage = {
@@ -23,19 +42,14 @@ socket.onopen = function (_) {
 
   setInterval(() => {
     console.log(`Sent ${sendCount} messages (${(sendCount / 5).toFixed(2)}/s)`)
+    stats.sendCount += sendCount;
+    stats.perSecond = Number((sendCount / 5).toFixed(2));
     sendCount = 0;
   }, 5000)
 };
 
 socket.onmessage = function (event) {
-  //let aisMessage = JSON.parse(event.data)
-  //console.log(processMessageData(aisMessage))
-
-  //console.log(`Sending ${event.data}`)
-
-  //console.log('sending')
-
-  server.clients.forEach((client) => {
+  wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(event.data.toString('utf8'));
       sendCount++;
@@ -46,5 +60,7 @@ socket.onmessage = function (event) {
 };
 
 socket.onclose = function (_) {
-  console.log('aw poop :c')
+  console.log('Connection closed from aisstream')
 }
+
+server.listen(80);

@@ -77,6 +77,7 @@ map.on('load', () => {
   });
 
   const socket = new WebSocket("wss://atbs.pgm.sh")
+  //const socket = new WebSocket('ws://localhost:80')
 
   const statuses = {
     0: 'Under way using engine',
