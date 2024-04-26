@@ -130,7 +130,7 @@ map.on('load', () => {
   //fetch('http://localhost')
     .then((res) => res.json())
     .then((data) => {
-      window.boats = JSON.parse(JSON.stringify(data.boats));
+      Object.values(data.boats).forEach((boat) => processData(boat));
       updateBoatsOnMap();
     })
 
