@@ -1,3 +1,22 @@
+const statusColors = {
+  0: '#00a33c', //green
+  1: '#b80425', //red
+  2: '#b80425', //red
+  3: '#b8a004', //yellow
+  4: '#b8a004', //yellow,
+  5: '#b80425', //red
+  6: '#b80425', //red
+  7: '#00a33c', //green
+  8: '#00a33c', //green
+  9: '#b80425', //red
+  10: '#b80425', //red
+  11: '#00a33c', //green
+  12: '#00a33c', //green
+  13: '#b80425', //red
+  14: '#b80425', //red
+  15: '#b80425', //red
+}
+
 var map = new maplibregl.Map({
   container: "map", // container id
   hash: "mapHash",
@@ -76,51 +95,25 @@ map.on('load', () => {
     popup.remove();
   });
 
-  const socket = new WebSocket("wss://atbs.pgm.sh")
-  //const socket = new WebSocket('ws://localhost:80')
+  window.boats = {};
 
-  const statuses = {
-    0: 'Under way using engine',
-    1: 'Anchored',
-    2: 'Not under command',
-    3: 'Has restricted maneuverability',
-    4: 'Ship draught is limiting its movement',
-    5: 'Moored',
-    6: 'Aground',
-    7: 'Engaged in fishing',
-    8: 'Under way sailing',
-    9: '(Number reserved for modifying reported status of ships carrying dangerous goods/harmful substances/marine pollutants)',
-    10: '(Number reserved for modifying reported status of ships carrying dangerous goods/harmful substances/marine pollutants)',
-    11: 'Power-driven vessel towing astern',
-    12: 'Power-driven vessel pushing ahead/towing alongside',
-    13: '(Reserved for future use)',
-    14: 'Any of the following are active: AIS-SART (Search and Rescue Transmitter), AIS-MOB (Man Overboard), AIS-EPIRB (Emergency Position Indicating Radio Beacon)',
-    15: 'undefined'
-  }
-
-  const statusColors = {
-    0: '#00a33c', //green
-    1: '#b80425', //red
-    2: '#b80425', //red
-    3: '#b8a004', //yellow
-    4: '#b8a004', //yellow,
-    5: '#b80425', //red
-    6: '#b80425', //red
-    7: '#00a33c', //green
-    8: '#00a33c', //green
-    9: '#b80425', //red
-    10: '#b80425', //red
-    11: '#00a33c', //green
-    12: '#00a33c', //green
-    13: '#b80425', //red
-    14: '#b80425', //red
-    15: '#b80425', //red
-  }
-
-  let boats = {};
+  const processData = (aisMessage) => {
+    window.boats[aisMessage.shipName] = {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [aisMessage.position.lon, aisMessage.position.lat]
+      },
+      "properties": {
+        "id": aisMessage.mmsi,
+        "title": aisMessage.shipName,
+        "color": statusColors[aisMessage.statusCode]
+      }
+    }
+  };
 
   const updateBoatsOnMap = () => {
-    const features = Object.values(boats)
+    const features = Object.values(window.boats)
     map.getSource('boats').setData(
       {
         type: "FeatureCollection",
@@ -133,45 +126,22 @@ map.on('load', () => {
     return;
   }
 
-  const processMessageData = (data) => {
-    const processed = {
-      shipName: data.MetaData.ShipName,
-      position: {
-        lat: data.Message[data.MessageType].Latitude,
-        lon: data.Message[data.MessageType].Longitude,
-        course: data.Message[data.MessageType].Cog,
-        heading: data.Message[data.MessageType].TrueHeading,
-        speed: data.Message[data.MessageType].Sog
-      },
-      mmsi: data.MetaData.MMSI,
-      statusCode: data.Message[data.MessageType].NavigationalStatus,
-      statusString: statuses[data.Message[data.MessageType].NavigationalStatus]
-    }
+  //fetch("https://atbs.pgm.sh")
+  fetch('http://localhost')
+    .then((res) => res.json())
+    .then((data) => {
+      window.boats = JSON.parse(JSON.stringify(data.boats));
+      updateBoatsOnMap();
+    })
 
-    boats[processed.shipName] = {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [processed.position.lon, processed.position.lat]
-      },
-      "properties": {
-        "id": processed.mmsi,
-        "title": processed.shipName,
-        "color": statusColors[processed.statusCode]
-      }
-    }
-
-    updateBoatsOnMap();
-
-    return processed
-  }
+  //const socket = new WebSocket("wss://atbs.pgm.sh")
+  const socket = new WebSocket('ws://localhost:80')
 
   socket.onmessage = function (event) {
-    //console.log(event)
-
     const aisMessage = JSON.parse(event.data)
-    const processed = processMessageData(aisMessage)
-    //console.log(processed.shipName);
+
+    processData(aisMessage);
+    updateBoatsOnMap();
   };
 
   socket.onclose = function (_) {

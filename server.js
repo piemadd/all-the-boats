@@ -7,12 +7,18 @@ let stats = {
   perSecond: 0,
 }
 
+let boats = {};
+
 let sendCount = 0;
 
 const requestListener = ((req, res) => {
   res.setHeader("Content-Type", "application/json");
+  res.setHeader("Access-Control-Allow-Origin", "*")
   res.writeHead(200);
-  res.end(JSON.stringify(stats));
+  res.end(JSON.stringify({
+    stats,
+    boats
+  }));
 });
 
 const server = createServer(requestListener);
@@ -26,6 +32,59 @@ server.on('upgrade', function upgrade(request, socket, head) {
     wss.emit('connection', ws, request);
   });
 });
+
+const statuses = {
+  0: 'Under way using engine',
+  1: 'Anchored',
+  2: 'Not under command',
+  3: 'Has restricted maneuverability',
+  4: 'Ship draught is limiting its movement',
+  5: 'Moored',
+  6: 'Aground',
+  7: 'Engaged in fishing',
+  8: 'Under way sailing',
+  9: '(Number reserved for modifying reported status of ships carrying dangerous goods/harmful substances/marine pollutants)',
+  10: '(Number reserved for modifying reported status of ships carrying dangerous goods/harmful substances/marine pollutants)',
+  11: 'Power-driven vessel towing astern',
+  12: 'Power-driven vessel pushing ahead/towing alongside',
+  13: '(Reserved for future use)',
+  14: 'Any of the following are active: AIS-SART (Search and Rescue Transmitter), AIS-MOB (Man Overboard), AIS-EPIRB (Emergency Position Indicating Radio Beacon)',
+  15: 'undefined'
+}
+
+const processMessageData = (data) => {
+  const processed = {
+    shipName: data.MetaData.ShipName,
+    position: {
+      lat: data.Message[data.MessageType].Latitude,
+      lon: data.Message[data.MessageType].Longitude,
+      course: data.Message[data.MessageType].Cog,
+      heading: data.Message[data.MessageType].TrueHeading,
+      speed: data.Message[data.MessageType].Sog
+    },
+    mmsi: data.MetaData.MMSI,
+    statusCode: data.Message[data.MessageType].NavigationalStatus,
+    statusString: statuses[data.Message[data.MessageType].NavigationalStatus]
+  }
+
+  /*
+  boats[processed.shipName] = {
+    "type": "Feature",
+    "geometry": {
+      "type": "Point",
+      "coordinates": [processed.position.lon, processed.position.lat]
+    },
+    "properties": {
+      "id": processed.mmsi,
+      "title": processed.shipName,
+      "color": statusColors[processed.statusCode]
+    }
+  }
+  */
+  boats[processed.shipName] = processed;
+
+  return processed;
+};
 
 socket.onopen = function (_) {
   let subscriptionMessage = {
@@ -49,12 +108,14 @@ socket.onopen = function (_) {
 };
 
 socket.onmessage = function (event) {
+  const processed = processMessageData(JSON.parse(event.data));
+
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(event.data.toString('utf8'));
+      client.send(JSON.stringify(processed));
       sendCount++;
     } else {
-      console.log('Socket is not OPEN')
+      console.log('Socket is not open')
     }
   });
 };

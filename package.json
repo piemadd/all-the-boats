@@ -13,5 +13,8 @@
     "dotenv": "^16.4.5",
     "http-server": "^14.1.1",
     "ws": "^8.16.0"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.8"
   }
 }
