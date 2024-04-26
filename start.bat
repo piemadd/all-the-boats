@@ -1,0 +1,1 @@
+http-server ./web --host --port 3000
