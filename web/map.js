@@ -126,16 +126,16 @@ map.on('load', () => {
     return;
   }
 
-  //fetch("https://atbs.pgm.sh")
-  fetch('http://localhost')
+  fetch("https://atbs.pgm.sh")
+  //fetch('http://localhost')
     .then((res) => res.json())
     .then((data) => {
       window.boats = JSON.parse(JSON.stringify(data.boats));
       updateBoatsOnMap();
     })
 
-  //const socket = new WebSocket("wss://atbs.pgm.sh")
-  const socket = new WebSocket('ws://localhost:80')
+  const socket = new WebSocket("wss://atbs.pgm.sh")
+  //const socket = new WebSocket('ws://localhost:80')
 
   socket.onmessage = function (event) {
     const aisMessage = JSON.parse(event.data)
